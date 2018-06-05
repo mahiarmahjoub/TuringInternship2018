@@ -1,6 +1,6 @@
 ## ================== analysis of PRR expression dynamics ================== ##
 
-## -- import the raw counts AND gene aliases
+## ---- import the raw counts AND gene aliases ----------------------------- ##
 
 # counts in normalised in CPM based on library size 
 # contains selected timepoints based on NitPicker
@@ -14,101 +14,94 @@ cpm.raw <- read.table(file = file.path(dir, "dawnburst_slcu",
                       )
 
 
-# import the gene aliases to convert ATG format to gene names 
-gene.aliases <- read.delim(file.path(dir,"TAIR_genealiases.txt"), 
-                           stringsAsFactors=FALSE
-                           )
 
 
-## -- assign downstream target genes of PRR 
-# from (1) GO, (2) ChIPseq (3) CLUST and (4) literature Grundy et al 2015
+## ---- assign downstream target genes of PRR ------------------------------ ##
+# from (1) GO, (2) ChIPseq (3) CLUST and (4) literature 
 
-# upstream regulatory genes of interest
-master.regulators <- c("PRR7", "PRR8", "PRR9")
-master.regulators.ID <- c("AT5G02810", "AT4G00760", "AT2G46790")
+# genes of intereset from LITERATURE
+# includes master regulators + downstream targets
+genes.interest <- read.csv(file = file.path(dir,
+                                            "CircadianClock_genelist_literature.csv"), 
+                           header = TRUE, stringsAsFactors = FALSE)
 
-# some of the potential downstream targets
-genes.interest <- c("PRR1", "PRR5",
-                    "LHY", "CCA1", "ZTL", "GI", "LKP2", "ELF3",
-                    "CBF1", "CBF2", "CBF3", "MYC2"
-                    )
-genes.interest.ID <- gene.aliases$locus_name[gene.aliases$symbol 
-                                             %in% genes.interest]
-
-## -- expression of wanted genes AND separate based on condition
-
+# time points in minutes 
 time <- c(-10, 10, 24, 30, 45, 60, 105, 120)
 
-# select the desired genes 
-expression.all <- cpm.raw[cpm.raw$tracking_id %in% 
-                            c(master.regulators.ID, genes.interest.ID),]
-
-## place each separate condition in an object (maybe put in array later)
-exp.27.col0 <- expression.all[,
-                              colnames(expression.all)[
-                                grepl("Col",colnames(expression.all)) & 
-                                  grepl("27",colnames(expression.all))
-                                ]
-                              ]
-
-exp.22.col0 <- expression.all[,
-                              colnames(expression.all)[
-                                grepl("Col",colnames(expression.all)) & 
-                                  grepl("22",colnames(expression.all))
-                                ]
-                              ]
-
-exp.27.Ler0 <- expression.all[,
-                              colnames(expression.all)[
-                                grepl("Ler",colnames(expression.all)) & 
-                                  grepl("27",colnames(expression.all))
-                                ]
-                              ]
-
-exp.27.PRR <- expression.all[,
-                              colnames(expression.all)[
-                                grepl("prr",colnames(expression.all)) & 
-                                  grepl("27",colnames(expression.all))
-                                ]
-                              ]
-
-exp.22.PRR <- expression.all[,
-                              colnames(expression.all)[
-                                grepl("prr",colnames(expression.all)) & 
-                                  grepl("22",colnames(expression.all))
-                                ]
-                              ]
-
-exp.27.phy <- expression.all[,
-                             colnames(expression.all)[
-                               grepl("phyAB",colnames(expression.all)) & 
-                                 grepl("27",colnames(expression.all))
-                               ]
-                             ]
-
-exp.22.phy <- expression.all[,
-                             colnames(expression.all)[
-                               grepl("phyAB",colnames(expression.all)) & 
-                                 grepl("22",colnames(expression.all))
-                               ]
-                             ]
-
-exp.22.hsf <- expression.all[,
-                             colnames(expression.all)[
-                               grepl("hsfQK",colnames(expression.all)) & 
-                                 grepl("22",colnames(expression.all))
-                               ]
-                             ]
 
 
-## -- plot results 
 
-par(mfrow=c(2,2))
-for (i in 1:4){
-  plot(time, exp.22.col0[1,], xlim = c(time[1],time[length(time)]), 
-       ylim=c(0,max(as.numeric(expression.all))))
-  for (j in 1:nrow(expression.all)){
-    
-  }
-  
-  }
+## ---- visualisation of gene expression ----------------------------------- ##
+# consulted: https://rstudio-pubs-static.s3.amazonaws.com/123938_b1ce6ecfb4c342fca62cc7d4703b8dcd.html
+require(gplots, quietly = TRUE)
+require(RColorBrewer, quietly = TRUE)
+
+## ==== literature based list ============================================== ##
+# select the desired genes from the expression matrix 
+ratio.genes.present <- sum(cpm.raw$tracking_id %in% genes.interest$Gene.ID)/nrow(genes.interest)
+expression.selected.genes <- cpm.raw[cpm.raw$tracking_id %in% 
+                                       genes.interest$Gene.ID,]
+genes.selected <- expression.selected.genes$tracking_id
+genes.selected.name <- genes.interest$Gene.Name[genes.interest$Gene.ID %in% genes.selected]
+
+
+
+## -- choose condition of interest 
+mutant <- "prr"
+temp <- "27"
+# extract relevant columns 
+exp.cols <- grepl(mutant, colnames(expression.selected.genes)) & 
+  grepl(temp, colnames(expression.selected.genes))
+exp <- as.matrix(expression.selected.genes[,exp.cols])
+# log normalise 
+exp.log <- as.matrix(log2(exp + 1)) 
+# order genes based on the order of time each gene reaches peak expression
+exp.temporal.max.sorted <- sort(apply(exp.log,1,which.max), index.return=TRUE)$ix
+# log mean normalise 
+exp.log.norm <- expression.WT.22.log - apply(expression.WT.22.log,1,mean)
+
+# plot - log + unscaled
+#pdf(file = file.path(dir,paste0("heatmap_",mutant,"_",temp,".pdf")), width = 7, height = 5)
+heatmap.2(t(exp.log[exp.temporal.max.sorted,]), 
+          Rowv = NA, Colv=NA, trace = 'none', scale = 'none',
+          #col=colorRampPalette(colors = c("black","white"))(20),
+          col=(brewer.pal(9,"OrRd")), dendrogram = 'none',
+          labCol = genes.selected.name[exp.temporal.max.sorted], 
+          labRow = as.character(time), key.title = NA, key.ylab = NA, 
+          key.xlab = "log2(CPM+1)", ylab = "time (mins)", cexCol = 0.5, 
+          srtCol = 45, main = paste0(mutant," ",temp," ","nonscaled log(CPM)")
+)
+# plot - column (gene) scaled + non-log
+heatmap.2(t(exp[exp.temporal.max.sorted,]), 
+          Rowv = NA, Colv=NA, trace = 'none', scale = 'col',
+          #col=colorRampPalette(colors = c("black","white"))(20),
+          col=(brewer.pal(4,"OrRd")), dendrogram = 'none',
+          labCol = genes.selected.name[exp.temporal.max.sorted], 
+          labRow = as.character(time), key.title = NA, key.ylab = NA,
+          ylab = "time (mins)", cexCol = 0.5, srtCol = 45, 
+          main = paste0(mutant," ",temp," ","col.scaled CPM")
+          )
+# plot - column (gene) scaled + log
+heatmap.2(t(exp.log[exp.temporal.max.sorted,]), 
+          Rowv = NA, Colv=NA, trace = 'none', scale = 'col',
+          #col=colorRampPalette(colors = c("black","white"))(20),
+          col=(brewer.pal(4,"OrRd")), dendrogram = 'none',
+          labCol = genes.selected.name[exp.temporal.max.sorted], 
+          labRow = as.character(time), key.title = NA, key.ylab = NA,
+          ylab = "time (mins)",  cexCol = 0.5, srtCol = 45, 
+          main = paste0(mutant," ",temp," ","col.scaled log(CPM)")
+)
+#dev.off()
+
+
+
+
+## ==== ChIPseq based list ================================================= ##
+
+
+
+
+
+
+
+
