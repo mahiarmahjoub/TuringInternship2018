@@ -32,10 +32,11 @@ wt.models <- timedelay.lm.batch(bspline.data=wt.bspline.data[1:100,],
                                 ylab='Relative expression level (in log ratio)'
                                 )
 
-test <- read.csv(file.path(dir, "TuringInternship2018/algorithms/genereg_result_test.csv"), 
-                 header = TRUE, stringsAsFactors = FALSE)
+res.genereg <- wt.models
+#read.csv(file.path(dir, "TuringInternship2018/algorithms/genereg_result_test.csv"), 
+#                 header = TRUE, stringsAsFactors = FALSE)
 
-plot.GeneReg(as.matrix(test[,1:2]),vertex.size=2,layout=layout.fruchterman.reingold)
+#plot.GeneReg(as.matrix(wt.models),vertex.size=2,layout=layout.fruchterman.reingold)
 
 
 
@@ -92,6 +93,9 @@ tdcor_out= TDCOR(dataset=LR_dataset, l_genes=l_genes, l_names=l_names,
                  thr_overlap=pthr_overlap, tol=ptol, MinProp=pMinProp,
                  MinTarNumber=pMinTarNumber, outfile_name=poutfile_name)
 
+res.tdcor <- read.delim(file.path(dir, "TuringInternship2018/TDCor_output.txt"), 
+                          header = FALSE, stringsAsFactors = FALSE)
+
 
 
 
@@ -118,8 +122,7 @@ rownames(exprMatr) <- paste("Gene", 1:20, sep="")
 colnames(exprMatr) <- paste("Sample", 1:5, sep="")
 weightMat <- GENIE3(exprMatr)
 weightMat <- GENIE3(exprMatr, treeMethod="ET", K=7, nTrees=50)
-linkList <- getLinkList(weightMat)
-
+res.linkList.GENIE <- getLinkList(weightMat)
 
 
 
@@ -144,4 +147,6 @@ res <- dynGENIE3(TS.data, time.points)
 
 link.list <- get.link.list(res$weight.matrix)
 
+res.dynGENIE <- read.csv(file.path(dir,"TuringInternship2018/dynGENIE_test_links_results.csv"), 
+                          header=TRUE, stringsAsFactors = FALSE)
 

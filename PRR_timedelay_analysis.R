@@ -16,6 +16,8 @@ gene.alias <- read.delim(file.path(dir,"TAIR_genealiases.txt"), header = TRUE,
                          stringsAsFactors = FALSE)
 
 
+# time points in minutes 
+time <- c(-10, 10, 24, 30, 45, 60, 105, 120)
 
 
 ## ---- assign downstream target genes of PRR ------------------------------ ##
@@ -27,8 +29,6 @@ genes.interest <- read.csv(file = file.path(dir,
                                             "CircadianClock_genelist_literature.csv"), 
                            header = TRUE, stringsAsFactors = FALSE)
 
-# time points in minutes 
-time <- c(-10, 10, 24, 30, 45, 60, 105, 120)
 
 
 
@@ -109,22 +109,28 @@ heatmap.2(t(exp.log[exp.temporal.max.sorted,]),
 
 ## ==== ChIPseq based list ================================================= ##
 # select the desired genes from the expression matrix 
-chipseq.protein <- "PRR7"
-genes.interest.chipseq <- read.csv(file.path(dir,"PRR_chipseq_analysis/boundgenes_500bp.csv"), 
-                                   header = TRUE, stringsAsFactors = FALSE)
-expression.selected.genes <- cpm.raw[cpm.raw$tracking_id %in% 
-                                       genes.interest.chipseq[,chipseq.protein],]
-genes.selected <- genes.selected.name <- expression.selected.genes$tracking_id
+# chipseq.protein <- "PRR7HA"
+# genes.interest.chipseq <- read.csv(file.path(dir,"PRR_chipseq_analysis/boundgenes_500bp_MACS2filt.csv"),
+#                                    header = TRUE, stringsAsFactors = FALSE)
+# expression.selected.genes <- cpm.raw[cpm.raw$tracking_id %in%
+#                                        genes.interest.chipseq[,chipseq.protein],]
+# genes.selected <- genes.selected.name <- expression.selected.genes$tracking_id
 # genes.selected.name[genes.selected 
 #                     %in% 
 #                       gene.alias$locus_name] <- gene.alias$symbol[gene.alias$locus_name %in% 
 #                                                                     genes.selected 
 #                                                                     ]
 
+chipseq.protein <- "target"
+genes.interest.chipseq <- read.csv(file.path(dir,"changing_genes_list_v2_180628_targets.csv"),
+                                   header = TRUE, stringsAsFactors = FALSE)
+expression.selected.genes <- cpm.raw[cpm.raw$tracking_id %in%
+                                       as.character(as.matrix(genes.interest.chipseq)),]
+genes.selected <- genes.selected.name <- expression.selected.genes$tracking_id
 
 ## -- choose condition of interest 
 # Col Ler prr579 phyABcry12 hsfQK (22-27)
-mutant <- "Ler"
+mutant <- "Col"
 temp <- "22"
 # extract relevant columns 
 exp.cols <- grepl(mutant, colnames(expression.selected.genes)) & 
@@ -138,7 +144,7 @@ exp.temporal.max.sorted <- sort(apply(exp.log,1,which.max), index.return=TRUE)$i
 exp.log.norm <- exp.log - apply(exp.log,1,mean)
 
 # plot - log + unscaled
-pdf(file = file.path(dir,paste0("heatmap_chipseq_",chipseq.protein,
+pdf(file = file.path(dir,paste0("heatmap_selectedgenes_v2_", chipseq.protein,
                                 "_",mutant,"_",temp,".pdf")), width = 7, 
     height = 5)
 heatmap.2(t(exp.log[exp.temporal.max.sorted,]), 
@@ -148,10 +154,13 @@ heatmap.2(t(exp.log[exp.temporal.max.sorted,]),
           #labCol = genes.selected[exp.temporal.max.sorted], 
           labCol = NA,
           labRow = as.character(time), key.title = NA, key.ylab = NA, 
-          key.xlab = "log2(CPM+1)", ylab = "time (mins)", cexCol = 0.55, 
-          srtCol = 45, main = paste0(mutant," ",temp," ",chipseq.protein,
-                                     " ChIPseq \n nonscaled log(CPM)")
-)
+          key.xlab = "log2(CPM+1)", ylab = "time (mins)", 
+          cexCol = 0.55, srtCol = 45, 
+          main = paste0(mutant," ",temp," ", chipseq.protein,
+                        " selected genes \n nonscaled log(CPM)")
+          # main = paste0(mutant," ",temp," ",chipseq.protein,
+          #                           " ChIPseq \n nonscaled log(CPM)")
+          )
 # plot - column (gene) scaled + non-log
 heatmap.2(t(exp[exp.temporal.max.sorted,]), 
           Rowv = NA, Colv=NA, trace = 'none', scale = 'col',
@@ -160,10 +169,12 @@ heatmap.2(t(exp[exp.temporal.max.sorted,]),
           #labCol = genes.selected[exp.temporal.max.sorted], 
           labCol = NA,
           labRow = as.character(time), key.title = NA, key.ylab = NA,
-          ylab = "time (mins)", cexCol = 0.55, srtCol = 45, 
-          main = paste0(mutant," ",temp," ",chipseq.protein,
-                        " ChIPseq \n col.scaled CPM")
-)
+          ylab = "time (mins)", cexCol = 0.55, srtCol = 45,
+          # main = paste0(mutant," ",temp," ",chipseq.protein,
+          #               " ChIPseq \n col.scaled CPM")
+          main = paste0(mutant," ",temp," ", chipseq.protein,
+                        " selected genes \n col.scaled CPM")
+          )
 # plot - column (gene) scaled + log
 heatmap.2(t(exp.log[exp.temporal.max.sorted,]), 
           Rowv = NA, Colv=NA, trace = 'none', scale = 'col',
@@ -173,8 +184,10 @@ heatmap.2(t(exp.log[exp.temporal.max.sorted,]),
           labCol = NA,
           labRow = as.character(time), key.title = NA, key.ylab = NA,
           ylab = "time (mins)",  cexCol = 0.55, srtCol = 45, 
-          main = paste0(mutant," ",temp," ",chipseq.protein,
-                        " ChIPseq \n col.scaled log(CPM)")
+          main = paste0(mutant," ",temp," ", chipseq.protein,
+                        " selected genes \n col.scaled log(CPM)")
+          # main = paste0(mutant," ",temp," ",chipseq.protein,
+          #               " ChIPseq \n col.scaled log(CPM)")
 )
 dev.off()
 
