@@ -7,6 +7,22 @@
 
 
 
+## -- order genes based on peak expression time ---------------------------- ##
+temporal.order.genes <- function(x){
+  
+  peak.time <- apply(x, 1, which.max)
+  gene.order <- order(peak.time, decreasing = FALSE)
+  gene.order.names <- rownames(x[gene.order,])
+  
+  return(list(peak.time=peak.time, peak.order=gene.order, 
+              names=gene.order.names))
+  
+}
+
+
+
+
+
 ## -- simulate a random network -------------------------------------------- ## 
 n.nodes <- 20
 node.names <- LETTERS[1:n.nodes]
@@ -305,15 +321,17 @@ network.pairwise.edge.comparison <- function(sample.list, reference.list,
   recall <- TP/(TP+FN)
   TNR <- TN/(TN+FP)
   accuracy <- (TP+TN)/sum(sim.table)
+  sensitivity <- TP/(TP+FN)
+  specificity <- TN/(TN+FP)
   F1 <- 2*precision*recall/(precision+recall)
   
   # extract the edges names (direction sensitive) from list
 
-  sample.edges <- paste(sample.list$regulator[sample.list$weight>0], 
-                        sample.list$target[sample.list$weight>0], 
+  sample.edges <- paste(sample.list$regulator[sample.list[,3]>threshold], 
+                        sample.list$target[sample.list[,3]>threshold], 
                         sep = "~")
-  ref.edges <- paste(reference.list$regulator[reference.list$weight>0], 
-                     reference.list$target[sample.list$weight>0], 
+  ref.edges <- paste(reference.list$regulator[reference.list[,3]>threshold], 
+                     reference.list$target[sample.list[,3]>threshold], 
                         sep = "~")
   # find common egdes
   common.edges <- sample.edges[sample.edges %in% ref.edges]
@@ -328,6 +346,7 @@ network.pairwise.edge.comparison <- function(sample.list, reference.list,
               metrics=c(TN=TN, FN=FN, TP=TP, FP=FP, 
                         prec=precision, recall=recall, 
                         true.neg.rate=TNR, accuracy=accuracy, 
+                        sensitivity=sensitivity, specificity=specificity,
                         F1=F1)
               )
          )
